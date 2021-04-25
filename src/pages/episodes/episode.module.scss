@@ -36,14 +36,14 @@
       }
 
       &:hover {
-        filter: brightness(0.9);
+        filter: brightness(0.9)
       }
     }
   }
 
   header {
     padding-bottom: 1rem;
-    border-bottom: 1pc solid var(--gray-100);
+    border-bottom: 1px solid var(--gray-100);
 
     h1 {
       margin-top: 2rem;
@@ -68,7 +68,7 @@
           position: absolute;
           left: 0;
           top: 50%;
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%)
         }
       }
     }

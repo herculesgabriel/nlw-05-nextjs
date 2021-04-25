@@ -1,55 +1,48 @@
 import { GetStaticProps } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import Head from 'next/head';
 import { format, parseISO } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
-import { AxiosResponse } from 'axios';
-
-import styles from './home.module.scss';
 
 import { api } from '../services/api';
 import { convertDurationToTimeString } from '../utils/convertDurationToTimeString';
+import { usePlayer } from '../contexts/PlayerContext';
 
-interface ResponseData extends AxiosResponse {
-  data: {
-    id: string;
-    title: string;
-    members: string;
-    published_at: string;
-    thumbnail: string;
-    description: string;
-    file: {
-      url: string;
-      type: string;
-      duration: number;
-    };
-  }[];
-}
+import styles from './home.module.scss';
 
 type Episode = {
   id: string;
   title: string;
   thumbnail: string;
   members: string;
-  publishedAt: string;
   duration: number;
   durationAsString: string;
   url: string;
+  publishedAt: string;
 };
 
 type HomeProps = {
-  allEpisodes: Episode[];
   latestEpisodes: Episode[];
+  allEpisodes: Episode[];
 };
 
 export default function Home({ latestEpisodes, allEpisodes }: HomeProps) {
+  const { playList } = usePlayer();
+
+  const episodeList = [...latestEpisodes, ...allEpisodes];
+
   return (
     <div className={styles.homepage}>
+      <Head>
+        <title>Home | Podcastr</title>
+      </Head>
+
       <section className={styles.latestEpisodes}>
         <h2>Últimos lançamentos</h2>
 
         <ul>
-          {latestEpisodes.map(episode => {
+          {latestEpisodes.map((episode, index) => {
             return (
               <li key={episode.id}>
                 <Image
@@ -69,7 +62,7 @@ export default function Home({ latestEpisodes, allEpisodes }: HomeProps) {
                   <span>{episode.durationAsString}</span>
                 </div>
 
-                <button type="button">
+                <button type="button" onClick={() => playList(episodeList, index)}>
                   <img src="/play-green.svg" alt="Tocar episódio" />
                 </button>
               </li>
@@ -93,7 +86,7 @@ export default function Home({ latestEpisodes, allEpisodes }: HomeProps) {
             </tr>
           </thead>
           <tbody>
-            {allEpisodes.map(episode => {
+            {allEpisodes.map((episode, index) => {
               return (
                 <tr key={episode.id}>
                   <td style={{ width: 72 }}>
@@ -114,7 +107,10 @@ export default function Home({ latestEpisodes, allEpisodes }: HomeProps) {
                   <td style={{ width: 100 }}>{episode.publishedAt}</td>
                   <td>{episode.durationAsString}</td>
                   <td>
-                    <button type="button">
+                    <button
+                      type="button"
+                      onClick={() => playList(episodeList, index + latestEpisodes.length)}
+                    >
                       <img src="/play-green.svg" alt="Tocar episódio" />
                     </button>
                   </td>
@@ -127,9 +123,8 @@ export default function Home({ latestEpisodes, allEpisodes }: HomeProps) {
     </div>
   );
 }
-
 export const getStaticProps: GetStaticProps = async () => {
-  const { data }: ResponseData = await api.get('episodes', {
+  const { data } = await api.get('episodes', {
     params: {
       _limit: 12,
       _sort: 'published_at',
@@ -137,8 +132,8 @@ export const getStaticProps: GetStaticProps = async () => {
     },
   });
 
-  const episodes = data.map(
-    (episode): Episode => ({
+  const episodes = data.map(episode => {
+    return {
       id: episode.id,
       title: episode.title,
       thumbnail: episode.thumbnail,
@@ -147,14 +142,17 @@ export const getStaticProps: GetStaticProps = async () => {
       duration: Number(episode.file.duration),
       durationAsString: convertDurationToTimeString(Number(episode.file.duration)),
       url: episode.file.url,
-    })
-  );
+    };
+  });
 
   const latestEpisodes = episodes.slice(0, 2);
-  const allEpisodes = episodes.slice(2);
+  const allEpisodes = episodes.slice(2, episodes.length);
 
   return {
-    props: { allEpisodes, latestEpisodes },
+    props: {
+      latestEpisodes,
+      allEpisodes,
+    },
     revalidate: 60 * 60 * 8,
   };
 };
